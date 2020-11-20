@@ -2,7 +2,10 @@
 
 int main() {
     char meldung[] = "Hello";
-    int i;
+//    char meldung [6] = {72, 101, 108, 108, 111, 0};
+//    char meldung [] = {72, 101, 108, 108, 111, 0};
+//      char meldung [] = {'H', 'e', 'l', 'l', 'o', '\0'};
+      int i;
 
     i=0;
     while(meldung[i] != '\0') {
