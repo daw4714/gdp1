@@ -65,20 +65,20 @@ int main(void) {
 
     // Maximal LINES and COLS are set by curses for the current window size.
     // Check if the window is large enough to display our message
-    if ( LINES < min_rows       || COLS < msg_len     ) {
+    if ( LINES < min_rows || COLS < msg_len ) {
         // Cleanup special curses settings and restore the normal terminal functionality
         cleanupCursesApp();
         
         // Print a conventional error message via printf.
         // Note: this only work after the call to  cleanupCursesApp();
-        printf("Das Fenster ist zu klein: wir brauchen mindestens %dx%d\n", msg_len, min_rows );
+        printf("Das Fenster ist zu klein: wir brauchen mindestens %dx%d\n", min_rows , msg_len );
 
         // Set the result code to report the error
         res_code = RES_FAILED;
     } else {
         // Center output
-        int mid_row = COLS/2;
-        int start_col = LINES/2;
+        int mid_row = (LINES-1)/2;
+        int start_col = (COLS-1)/2-msg_len/2;
 
         // Write letter A to the top    left  corner of our display
         move(0,0);          // Move to position
@@ -86,12 +86,12 @@ int main(void) {
 
         // Write letter B to the top    right corner of our display
         // Use combination of move() and addch() functions
-        mvaddch(0, COLS, 'B');
+        mvaddch(0, COLS-1, 'B');
         // Write letter C to the bottom right corner of our display
-        mvaddch(LINES, 0, 'C');
+        mvaddch(LINES-1, COLS-1, 'C');
 
         // Write letter D to the bottom left  corner of our display
-        mvaddch(LINES, COLS, 'D');
+        mvaddch(LINES-1, 0, 'D');
 
  
         // Write our message centered onto the display
@@ -101,7 +101,7 @@ int main(void) {
         refresh();
         
         // Wait for user to press a key
-       nodelay(stdscr, TRUE);             // make getch to be a blocking call
+       nodelay(stdscr, FALSE);             // make getch to be a blocking call
         getch();
 
         // Set the result code to report success
