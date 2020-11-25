@@ -177,7 +177,7 @@ int doLevel() {
 
         // Process userworm
         // Now move the worm for one step
-        moveWorm(WORM_GAME_ONGOING);
+        moveWorm(&game_state);
         // Bail out of the loop if something bad happened
         if ( game_state != WORM_GAME_ONGOING ) {
             end_level_loop = TRUE;
@@ -293,7 +293,7 @@ void showWorm() {
     // All other elements are already displayed
     placeItem(
             theworm_headpos_y ,
-            theworm_headpos_y ,
+            theworm_headpos_x ,
             SYMBOL_WORM_INNER_ELEMENT,theworm_wcolor);
 }
 
