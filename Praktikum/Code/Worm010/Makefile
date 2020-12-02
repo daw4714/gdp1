@@ -17,7 +17,7 @@ TARGETS += $(BIN_DIR)/worm
 #################################################
 
 # Generate debugging symbols?
-CFLAGS = -g -Wall
+CFLAGS = -g -Wall -Wno-main
 # set appropriate library for curses
 ifeq ($(MSYSTEM),MINGW32)
     LDLIBS = -lpdcurses

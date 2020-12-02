@@ -370,7 +370,7 @@ void setWormHeading( enum WormHeading dir) {
 // MAIN
 // ********************************************************************************************
 
-int main(void) {
+enum ResCodes main(void) {
     int res_code;         // Result code from functions
     printf("Debbugger starten. \n Bitte Taste drücken.\n");
     getchar();
