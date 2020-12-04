@@ -1,0 +1,6 @@
+New in this version
+- introduction of (seperated) data structures for the worm
+We store length of the worm and its element positions on the screen.
+- The worm has a visible end. We cleanup behinf the worm.
+- We detect self-collisions of the worm
+
