@@ -32,18 +32,27 @@ enum ResCodes {
   RES_FAILED,
 };
 
+//### Codes for the array of positions ###
+//Unused element in the worm arrays of positions
+#define UNUSED_POS_ELEM -1
+
+
+
 // Dimensions and bounds
 #define NAP_TIME    100   // Time in milliseconds to sleep between updates of display
 #define MIN_NUMBER_OF_ROWS  3   // The guaranteed number of rows available for the board
 #define MIN_NUMBER_OF_COLS 10   // The guaranteed number of columns available for the board
+#define WORM_LENGTH 20   // Maximal length of the worm
 
 // Numbers for color pairs used by curses macro COLOR_PAIR
 //d #define COLP_USER_WORM 1
 enum ColorPairs{
   COLP_USER_WORM = 1, //d COLP_USER_WORM forced to be 1
+  COLP_FREE_CELL,
 };
 
 // Symbols to display
+#define SYMBOL_FREE_CELL ' '
 #define SYMBOL_WORM_INNER_ELEMENT '0'
 
 // Game state codes
@@ -51,9 +60,10 @@ enum ColorPairs{
 //d #define  WORM_OUT_OF_BOUNDS 1   // Left screen
 //d #define  WORM_GAME_QUIT     2   // User likes to quit
 enum GameStates {
-WORM_GAME_ONGOING,
-WORM_OUT_OF_BOUNDS,
-WORM_GAME_QUIT,
+  WORM_GAME_ONGOING,
+  WORM_OUT_OF_BOUNDS, //Left screen
+  WORM_CROSSING,  // Worm head crossed another worm element
+  WORM_GAME_QUIT, // User likes to quit
 };
 
 // Directions for the worm
@@ -75,9 +85,17 @@ enum WormHeading {
 // ********************************************************************************************
 
 // Data defining the worm
-int theworm_headpos_y;  // y-coordinate of the worm's head
-int theworm_headpos_x;  // x-coordinate of the worm's head
-
+// They will become components of a structure, later
+// Last usable index into the arrays
+// theeorm_wormpos_y and theworm_wormpos_x
+int theworm_maxindex;
+//An index into the array for the worm's head position
+//0 <= theworm_headindex <= theworm_maxindex
+int theworm_headindex;
+// Array of y positions for worm elements
+int theworm_wormpos_y[WORM_LENGTH];
+// Array of x positions for worm elements
+int theworm_wormpos_x[WORM_LENGTH];
 // The current heading of the worm
 // These are offsets from the set {-1,0,+1}
 int theworm_dx;
@@ -107,9 +125,11 @@ int getLastRow();
 int getLastCol();
 
 // Functions concerning the management of the worm data
-int initializeWorm(int headpos_y, int headpos_x, enum WormHeading dir, enum ColorPairs color);//d
+int initializeWorm(int len_max, int headpos_y, int headpos_x, enum WormHeading dir, enum ColorPairs color);//d
 void showWorm();
+void cleanWormTail();
 void moveWorm(enum GameStates* agame_state);//d
+bool isInUseByWorm(int new_headpos_y, int new_headpos_x);
 void setWormHeading(enum WormHeading dir);
 
 // ********************************************************************************************
@@ -122,110 +142,113 @@ void setWormHeading(enum WormHeading dir);
 
 // Initialize colors of the game
 void initializeColors() {
-    // Define colors of the game
-    start_color();
-    init_pair(COLP_USER_WORM, COLOR_GREEN,    COLOR_BLACK);
+  // Define colors of the game
+  start_color();
+  init_pair(COLP_USER_WORM, COLOR_GREEN,    COLOR_BLACK);
+  init_pair(COLP_FREE_CELL, COLOR_BLACK,    COLOR_BLACK);
 }
 
 void readUserInput(enum GameStates* agame_state ){ //d enum ersetzt int
-    int ch; // For storing the key codes
+  int ch; // For storing the key codes
 
-    if ((ch = getch()) > 0) {
-        // Is there some user input?
-        // Blocking or non-blocking depends of config of getch
-        switch(ch) {
-            case 'q' :    // User wants to end the show
-                *agame_state = WORM_GAME_QUIT;
-                break;
-            case KEY_UP :// User wants up
-                setWormHeading(WORM_UP);
-                break;
-            case KEY_DOWN :// User wants down
-                setWormHeading(WORM_DOWN);
-                break;
-            case KEY_LEFT :// User wants left
-                setWormHeading(WORM_LEFT);
-                break;
-            case KEY_RIGHT :// User wants right
-                setWormHeading(WORM_RIGHT);
-                break;
-            case 's' : // User wants single step
-                nodelay(stdscr, FALSE);   // We simply make getch blocking
-                break;
-            case ' ' : // Terminate single step; make getch non-blocking again
-                nodelay(stdscr, TRUE);   // Make getch non-blocking again
-                break;
-        }
+  if ((ch = getch()) > 0) {
+    // Is there some user input?
+    // Blocking or non-blocking depends of config of getch
+    switch(ch) {
+      case 'q' :    // User wants to end the show
+        *agame_state = WORM_GAME_QUIT;
+        break;
+      case KEY_UP :// User wants up
+        setWormHeading(WORM_UP);
+        break;
+      case KEY_DOWN :// User wants down
+        setWormHeading(WORM_DOWN);
+        break;
+      case KEY_LEFT :// User wants left
+        setWormHeading(WORM_LEFT);
+        break;
+      case KEY_RIGHT :// User wants right
+        setWormHeading(WORM_RIGHT);
+        break;
+      case 's' : // User wants single step
+        nodelay(stdscr, FALSE);   // We simply make getch blocking
+        break;
+      case ' ' : // Terminate single step; make getch non-blocking again
+        nodelay(stdscr, TRUE);   // Make getch non-blocking again
+        break;
     }
-    return;
+  }
+  return;
 }
 
 int doLevel() {
-    enum GameStates game_state; //d The current game_state
-    enum ResCodes res_code; //d Result code from function (ersetzt int durch enum)
-    int end_level_loop; // Indicates whether we should leave main loop
+  enum GameStates game_state; //d The current game_state
+  enum ResCodes res_code; //d Result code from function (ersetzt int durch enum)
+  int end_level_loop; // Indicates whether we should leave main loop
 
-    int bottomLeft_y, bottomLeft_x;   // Start positions of the worm
+  int bottomLeft_y, bottomLeft_x;   // Start positions of the worm
 
-    // At the beginnung of the level, we still have a chance to win
-    game_state = WORM_GAME_ONGOING;
+  // At the beginnung of the level, we still have a chance to win
+  game_state = WORM_GAME_ONGOING;
 
-    // There is always an initialized user worm.
-    // Initialize the userworm with its size, position, heading.
-    bottomLeft_y =  getLastRow();
-    bottomLeft_x =  0;
+  // There is always an initialized user worm.
+  // Initialize the userworm with its size, position, heading.
+  bottomLeft_y =  getLastRow();
+  bottomLeft_x =  0;
 
-    res_code = initializeWorm(bottomLeft_y, bottomLeft_x , WORM_RIGHT, COLP_USER_WORM);
-    if ( res_code != RES_OK) {
-        return res_code;
+  res_code = initializeWorm(WORM_LENGTH,bottomLeft_y, bottomLeft_x , WORM_RIGHT, COLP_USER_WORM);
+  if ( res_code != RES_OK) {
+    return res_code;
+  }
+
+  // Show worm at its initial position
+  showWorm();
+
+  // Display all what we have set up until now
+  refresh();
+
+  // Start the loop for this level
+  end_level_loop = false; // Flag for controlling the main loop
+  while(!end_level_loop) {//d ! anstatt == false
+    // Process optional user input
+    readUserInput(&game_state); 
+    if ( game_state == WORM_GAME_QUIT ) {
+      end_level_loop = true;
+      continue; // Go to beginning of the loop's block and check loop condition
     }
 
-    // Show worm at its initial position
+    // Process userworm
+    // Clean the tail of the worm
+    cleanWormTail();
+    // Now move the worm for one step
+    moveWorm(&game_state);
+    // Bail out of the loop if something bad happened
+    if ( game_state != WORM_GAME_ONGOING ) {
+      end_level_loop = true;
+      continue; // Go to beginning of the loop's block and check loop condition
+    }
+    // Show the worm at its new position
     showWorm();
+    // END process userworm
 
-    // Display all what we have set up until now
+    // Sleep a bit before we show the updated window
+    napms(NAP_TIME);
+
+    // Display all the updates
     refresh();
 
-    // Start the loop for this level
-    end_level_loop = false; // Flag for controlling the main loop
-    while(!end_level_loop) {//d ! anstatt == false
-        // Process optional user input
-        readUserInput(&game_state); 
-        if ( game_state == WORM_GAME_QUIT ) {
-            end_level_loop = true;
-            continue; // Go to beginning of the loop's block and check loop condition
-        }
+    // Start next iteration
+  }
 
-        // Process userworm
-        // Now move the worm for one step
-        moveWorm(&game_state);
-        // Bail out of the loop if something bad happened
-        if ( game_state != WORM_GAME_ONGOING ) {
-            end_level_loop = true;
-            continue; // Go to beginning of the loop's block and check loop condition
-        }
-        // Show the worm at its new position
-        showWorm();
-        // END process userworm
+  // Preset res_code for rest of the function
+  res_code = RES_OK;
 
-        // Sleep a bit before we show the updated window
-        napms(NAP_TIME);
+  // For some reason we left the control loop of the current level.
+  // However, in this version we do not yet check for the reason.
+  // There is no user feedback at the moment!
 
-        // Display all the updates
-        refresh();
-
-        // Start next iteration
-    }
-
-    // Preset res_code for rest of the function
-    res_code = RES_OK;
-
-    // For some reason we left the control loop of the current level.
-    // However, in this version we do not yet check for the reason.
-    // There is no user feedback at the moment!
-
-    // Normal exit point
-    return res_code;
+  // Normal exit point
+  return res_code;
 }
 
 // *********************************************
@@ -234,28 +257,28 @@ int doLevel() {
 
 // Initialize application with respect to curses settings
 void initializeCursesApplication() {
-    initscr(); // Initialize the curses screen
+  initscr(); // Initialize the curses screen
 
-    // Note:
-    // The call to initscr() defines various global variables of the curses framework.
-    // stdscr, LINES, COLS, TRUE, FALSE
+  // Note:
+  // The call to initscr() defines various global variables of the curses framework.
+  // stdscr, LINES, COLS, TRUE, FALSE
 
-    noecho();  // Characters typed ar not echoed
-    cbreak();  // No buffering of stdin
-    nonl();    // Do not translate 'return key' on keyboard to newline character
-    keypad(stdscr, TRUE); // Enable the keypad
-    curs_set(0);          // Make cursor invisible
-    // Begin in non-single-step mode (getch will not block)
-    nodelay(stdscr, TRUE);  // make getch to be a non-blocking call
+  noecho();  // Characters typed ar not echoed
+  cbreak();  // No buffering of stdin
+  nonl();    // Do not translate 'return key' on keyboard to newline character
+  keypad(stdscr, TRUE); // Enable the keypad
+  curs_set(0);          // Make cursor invisible
+  // Begin in non-single-step mode (getch will not block)
+  nodelay(stdscr, TRUE);  // make getch to be a non-blocking call
 }
 
 // Reset display to normale state and terminate curses application
 void cleanupCursesApp(void)
 {
-    standend();   // Turn off all attributes
-    refresh();    // Write changes to terminal
-    curs_set(1);  // Set cursor state to normal visibility
-    endwin();     // Terminate curses application
+  standend();   // Turn off all attributes
+  refresh();    // Write changes to terminal
+  curs_set(1);  // Set cursor state to normal visibility
+  endwin();     // Terminate curses application
 }
 
 // *************************************************
@@ -266,23 +289,23 @@ void cleanupCursesApp(void)
 // Place an item onto the curses display.
 void placeItem(int y, int x, chtype symbol, enum ColorPairs color_pair) {//d enum ersetzt int
 
-    //  Store item on the display (symbol code)
-    move(y, x);                         // Move cursor to (y,x)
-    attron(COLOR_PAIR(color_pair));     // Start writing in selected color
-    addch(symbol);                      // Store symbol on the virtual display
-    attroff(COLOR_PAIR(color_pair));    // Stop writing in selected color
+  //  Store item on the display (symbol code)
+  move(y, x);                         // Move cursor to (y,x)
+  attron(COLOR_PAIR(color_pair));     // Start writing in selected color
+  addch(symbol);                      // Store symbol on the virtual display
+  attroff(COLOR_PAIR(color_pair));    // Stop writing in selected color
 }
 
 // Getters
 
 // Get the last usable row on the display
 int getLastRow() {
-    return LINES-1;
+  return LINES-1;
 }
 
 // Get the last usable column on the display
 int getLastCol() {
- return COLS-1;
+  return COLS-1;
 }
 
 // *****************************************************
@@ -293,88 +316,163 @@ int getLastCol() {
 // The following functions all depend on the model of the worm
 
 // Initialize the worm
-int initializeWorm(int headpos_y, int headpos_x, enum WormHeading dir, enum ColorPairs color) {//d enum ersetzt int
-    // Initialize position of worms head
-    theworm_headpos_y = headpos_y;
-    theworm_headpos_x = headpos_x;
+int initializeWorm(int len_max, int headpos_y, int headpos_x, enum WormHeading dir, enum ColorPairs color) {//d enum ersetzt int
+  // Local variables for loops etc.
+  int i = 1;
+  // Initialize las usable index to len_max -1
+  // theworm_maxindex
+  theworm_maxindex = len_max -1;
+  // Initialize headindex
+  // theworm_headindex
+  theworm_headindex = 0 ;
 
-    // Initialize the heading of the worm
-    setWormHeading(dir);
+  //Mark all elements as unused in the array of positions
+  //theworm_wormpos_y[] and theworm_wormpos_x[]
+  //An unused position in the array is marked
+  //with code UNUSED_POS_ELEMENT
+  while(i<=4){
+    theworm_wormpos_y [i] = UNUSED_POS_ELEM;
+    theworm_wormpos_x [i] = UNUSED_POS_ELEM;
+    i = i +1;
+  }
 
-    // Initialze color of the worm
-    theworm_wcolor = color;
 
-    return RES_OK;
+  // Initialize position of worms head
+  theworm_wormpos_x[theworm_headindex] = headpos_x;
+  theworm_wormpos_y[theworm_headindex] = headpos_y;
+
+  // Initialize the heading of the worm
+  setWormHeading(dir);
+
+  // Initialze color of the worm
+  theworm_wcolor = color;
+
+  return RES_OK;
 }
 
 // Show the worms's elements on the display
 // Simple version
 void showWorm() {
-    // Due to our encoding we just need to show the head element
-    // All other elements are already displayed
-    placeItem(
-            theworm_headpos_y ,
-            theworm_headpos_x ,
-            SYMBOL_WORM_INNER_ELEMENT,theworm_wcolor);
+  // Due to our encoding we just need to show the head element
+  // All ot
+  // her elements are already displayed
+  placeItem(
+      theworm_wormpos_y[theworm_headindex] ,
+      theworm_wormpos_x[theworm_headindex] ,
+      SYMBOL_WORM_INNER_ELEMENT,theworm_wcolor);
 }
 
 void moveWorm(enum GameStates* agame_state) {//d enum ersetzt int
-    // Compute and store new head position according to current heading.
-    theworm_headpos_y += theworm_dy;
-    theworm_headpos_x += theworm_dx;
+  int headpos_x;
+  int headpos_y;
 
-    // Check if we would leave the display if we move the worm's head according
-    // to worm's last direction.
-    // We are not allowed to leave the display's window.
-    if (theworm_headpos_x < 0) {
-        *agame_state = WORM_OUT_OF_BOUNDS;
-    } else if (theworm_headpos_x > getLastCol() ) { 
-        *agame_state = WORM_OUT_OF_BOUNDS;
-    } else if (theworm_headpos_y < 0) {  
-        *agame_state = WORM_OUT_OF_BOUNDS;
-	} else if (theworm_headpos_y > getLastRow() ) {
-        *agame_state = WORM_OUT_OF_BOUNDS;
-    } else {
-        // We will stay within bounds.
-        // So all is well
-        // Do nothing
+  //Get the current position of the worm's head element and
+  //compute the new head position according to current heading
+  //Do not store the new head position in the array of positions, yet.
+  headpos_y = theworm_wormpos_y[theworm_headindex];
+  headpos_x = theworm_wormpos_x[theworm_headindex];
+
+  // Check if we would hit something (for good or bad) or are going to leave
+  /// the display if we move the worm's head according to worm's last
+  // We are not allowed to leave the display's window.
+  if (headpos_x < 0) {
+    *agame_state = WORM_OUT_OF_BOUNDS;
+  } else if (headpos_x > getLastCol() ) { 
+    *agame_state = WORM_OUT_OF_BOUNDS;
+  } else if (headpos_y < 0) {  
+    *agame_state = WORM_OUT_OF_BOUNDS;
+  } else if (headpos_y > getLastRow() ) {
+    *agame_state = WORM_OUT_OF_BOUNDS;
+  } else {
+    // We will stay within bounds.
+    // Check if the worm's head will collide with itself at the new position
+    if(isInUseByWorm(headpos_y, headpos_x)){
+      //That's bad: stop game
+      *agame_state = WORM_CROSSING;
     }
+  }
+  //Check the status of *agame_state
+  //Go on if nothing bad happend
+  if( *agame_state == WORM_GAME_ONGOING ){
+    //So all is well: we did not hit anything bad and did not leave the
+    //window. --> Update the worm structure.
+    //Increment theworm_headindex
+    //Go round if end of worm is reached (ring buffer)
+    theworm_headindex = (theworm_headindex  + 1) % theworm_maxindex;      
+
+    //Store new coordinates of head element in worm structure
+    theworm_wormpos_x[theworm_headindex] = headpos_x;
+    theworm_wormpos_y[theworm_headindex] = headpos_y;
+  }
 }
 
-// Setters
-void setWormHeading( enum WormHeading dir) {
+  //A simple collission detection
+  bool isInUseByWorm(int new_headpos_y, int new_headpos_x){
+  int i;
+  bool collision = false;
+  i = theworm_headindex;
+  do{
+  if(theworm_wormpos_x[i] == new_headpos_x && theworm_wormpos_y[i] == new_headpos_y){ collision = true;
+  break;
+  } else{ i = (i+1) % theworm_maxindex;
+  if(theworm_wormpos_x[i] == UNUSED_POS_ELEM){break;}
+  }
+  
+  }while(i != theworm_headindex && theworm_wormpos_x[i] != UNUSED_POS_ELEM);
+  //Return what we found out
+  return collision;
+  
+}
+
+  // Setters
+  void setWormHeading( enum WormHeading dir) {
     switch(dir) {
-        case WORM_UP :// User wants up
-            theworm_dx=0;
-            theworm_dy=-1;
-            break;
-        case WORM_DOWN :// User wants down
-            theworm_dx=0;
-            theworm_dy=1;
-            break;
-        case WORM_LEFT :// User wants left
-            theworm_dx=-1;
-            theworm_dy=0;
-            break;
-        case WORM_RIGHT :// User wants right
-            theworm_dx=1;
-            theworm_dy=0;
-            break;
+      case WORM_UP :// User wants up
+        theworm_dx=0;
+        theworm_dy=-1;
+        break;
+      case WORM_DOWN :// User wants down
+        theworm_dx=0;
+        theworm_dy=1;
+        break;
+      case WORM_LEFT :// User wants left
+        theworm_dx=-1;
+        theworm_dy=0;
+        break;
+      case WORM_RIGHT :// User wants right
+        theworm_dx=1;
+        theworm_dy=0;
+        break;
     }
-} 
+  } 
 
-// END WORM_DETAIL
-// ********************************************************************************************
+  void cleanWormTail() {
+    int tailindex;
 
-// ********************************************************************************************
-// MAIN
-// ********************************************************************************************
+      //Compute tailindex
+      tailindex = (theworm_headindex + 1) % theworm_maxindex;
+    //Check the array of worm elements.
+    //Is the array element at tailindex already in use?
+    //Checking either array theworm_wormpos_y
+    //or theworm_wormpos_x is enough.
 
-enum ResCodes main(void) {
+    if(theworm_wormpos_x[tailindex] == UNUSED_POS_ELEM){
+      //YES: place a SYMBOL_FREE_CELL at the tail's position
+      placeItem(theworm_wormpos_x[tailindex],theworm_wormpos_y[tailindex], SYMBOL_FREE_CELL, COLP_FREE_CELL); 
+    }
+  }
+  // END WORM_DETAIL
+  // ********************************************************************************************
+
+  // ********************************************************************************************
+  // MAIN
+  // ********************************************************************************************
+
+  enum ResCodes main(void) {
     int res_code;         // Result code from functions
     printf("Debbugger starten. \n Bitte Taste drücken.\n");
     getchar();
-    
+
 
     // Here we start
     initializeCursesApplication();  // Init various settings of our application
@@ -386,17 +484,17 @@ enum ResCodes main(void) {
     // Check if the window is large enough to display messages in the message area
     // a has space for at least one line for the worm
     if ( LINES < MIN_NUMBER_OF_ROWS || COLS < MIN_NUMBER_OF_COLS ) {
-        // Since we not even have the space for displaying messages
-        // we print a conventional error message via printf after
-        // the call of cleanupCursesApp()
-        cleanupCursesApp();
-        printf("Das Fenster ist zu klein: wir brauchen mindestens %dx%d\n",
-                MIN_NUMBER_OF_COLS, MIN_NUMBER_OF_ROWS );
-        res_code = RES_FAILED;
+      // Since we not even have the space for displaying messages
+      // we print a conventional error message via printf after
+      // the call of cleanupCursesApp()
+      cleanupCursesApp();
+      printf("Das Fenster ist zu klein: wir brauchen mindestens %dx%d\n",
+          MIN_NUMBER_OF_COLS, MIN_NUMBER_OF_ROWS );
+      res_code = RES_FAILED;
     } else {
-        res_code = doLevel();
-        cleanupCursesApp();
+      res_code = doLevel();
+      cleanupCursesApp();
     }
 
     return res_code;
-}
+  }
