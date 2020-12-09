@@ -20,13 +20,9 @@
 // Constants, data structures
 // ********************************************************************************************
 
-//d gelöscht CPP-Definition und durch type bool ersetzt
-//#define TRUE 1 
-//#define FALSE 0
 
 // Result codes of functions
-//d #define RES_OK 0
-//d #define RES_FAILED 1
+
 enum ResCodes {
   RES_OK,
   RES_FAILED,
@@ -56,9 +52,7 @@ enum ColorPairs{
 #define SYMBOL_WORM_INNER_ELEMENT '0'
 
 // Game state codes
-//d #define  WORM_GAME_ONGOING  0
-//d #define  WORM_OUT_OF_BOUNDS 1   // Left screen
-//d #define  WORM_GAME_QUIT     2   // User likes to quit
+
 enum GameStates {
   WORM_GAME_ONGOING,
   WORM_OUT_OF_BOUNDS, //Left screen
@@ -67,10 +61,6 @@ enum GameStates {
 };
 
 // Directions for the worm
-//d #define WORM_UP      0
-//d #define WORM_DOWN    1
-//d #define WORM_LEFT    2
-//d #define WORM_RIGHT   3
 enum WormHeading {
   WORM_UP,
   WORM_DOWN,
@@ -112,8 +102,7 @@ enum ColorPairs theworm_wcolor; //d int durch enum ersetzt
 // Management of the game
 void initializeColors();
 void readUserInput(enum GameStates* agame_state );//d
-int doLevel();
-
+enum ResCodes doLevel();
 // Standard curses initialization and cleanup
 void initializeCursesApplication(); 
 void cleanupCursesApp(void);
@@ -173,7 +162,7 @@ void readUserInput(enum GameStates* agame_state ){ //d enum ersetzt int
       case 's' : // User wants single step
         nodelay(stdscr, FALSE);   // We simply make getch blocking
         break;
-      case ' ' : // Terminate single step; make getch non-blocking again
+      case '~ ' : // Terminate single step; make getch non-blocking again
         nodelay(stdscr, TRUE);   // Make getch non-blocking again
         break;
     }
@@ -181,7 +170,7 @@ void readUserInput(enum GameStates* agame_state ){ //d enum ersetzt int
   return;
 }
 
-int doLevel() {
+enum ResCodes doLevel() {
   enum GameStates game_state; //d The current game_state
   enum ResCodes res_code; //d Result code from function (ersetzt int durch enum)
   int end_level_loop; // Indicates whether we should leave main loop
@@ -369,8 +358,8 @@ void moveWorm(enum GameStates* agame_state) {//d enum ersetzt int
   //Get the current position of the worm's head element and
   //compute the new head position according to current heading
   //Do not store the new head position in the array of positions, yet.
-  headpos_y = theworm_wormpos_y[theworm_headindex];
-  headpos_x = theworm_wormpos_x[theworm_headindex];
+  headpos_y = theworm_wormpos_y[theworm_headindex] + theworm_dy;
+  headpos_x = theworm_wormpos_x[theworm_headindex] + theworm_dx;
 
   // Check if we would hit something (for good or bad) or are going to leave
   /// the display if we move the worm's head according to worm's last
@@ -406,95 +395,102 @@ void moveWorm(enum GameStates* agame_state) {//d enum ersetzt int
   }
 }
 
-  //A simple collission detection
-  bool isInUseByWorm(int new_headpos_y, int new_headpos_x){
+//A simple collission detection
+bool isInUseByWorm(int new_headpos_y, int new_headpos_x){
   int i;
   bool collision = false;
   i = theworm_headindex;
   do{
-  if(theworm_wormpos_x[i] == new_headpos_x && theworm_wormpos_y[i] == new_headpos_y){ collision = true;
-  break;
-  } else{ i = (i+1) % theworm_maxindex;
-  if(theworm_wormpos_x[i] == UNUSED_POS_ELEM){break;}
-  }
-  
-  }while(i != theworm_headindex && theworm_wormpos_x[i] != UNUSED_POS_ELEM);
+    if(theworm_wormpos_x[i] == new_headpos_x && theworm_wormpos_y[i] == new_headpos_y){ collision = true;
+      break;
+    } else{
+      i++;
+      if(i>theworm_maxindex){
+        i = 0;
+      }
+      //i =( (i+1) % theworm_maxindex + 1);
+    }
+
+  }while(i != theworm_headindex);
   //Return what we found out
   return collision;
-  
+
 }
 
-  // Setters
-  void setWormHeading( enum WormHeading dir) {
-    switch(dir) {
-      case WORM_UP :// User wants up
-        theworm_dx=0;
-        theworm_dy=-1;
-        break;
-      case WORM_DOWN :// User wants down
-        theworm_dx=0;
-        theworm_dy=1;
-        break;
-      case WORM_LEFT :// User wants left
-        theworm_dx=-1;
-        theworm_dy=0;
-        break;
-      case WORM_RIGHT :// User wants right
-        theworm_dx=1;
-        theworm_dy=0;
-        break;
-    }
-  } 
-
-  void cleanWormTail() {
-    int tailindex;
-
-      //Compute tailindex
-      tailindex = (theworm_headindex + 1) % theworm_maxindex;
-    //Check the array of worm elements.
-    //Is the array element at tailindex already in use?
-    //Checking either array theworm_wormpos_y
-    //or theworm_wormpos_x is enough.
-
-    if(theworm_wormpos_x[tailindex] == UNUSED_POS_ELEM){
-      //YES: place a SYMBOL_FREE_CELL at the tail's position
-      placeItem(theworm_wormpos_x[tailindex],theworm_wormpos_y[tailindex], SYMBOL_FREE_CELL, COLP_FREE_CELL); 
-    }
+// Setters
+void setWormHeading( enum WormHeading dir) {
+  switch(dir) {
+    case WORM_UP :// User wants up
+      theworm_dx=0;
+      theworm_dy=-1;
+      break;
+    case WORM_DOWN :// User wants down
+      theworm_dx=0;
+      theworm_dy=1;
+      break;
+    case WORM_LEFT :// User wants left
+      theworm_dx=-1;
+      theworm_dy=0;
+      break;
+    case WORM_RIGHT :// User wants right
+      theworm_dx=1;
+      theworm_dy=0;
+      break;
   }
-  // END WORM_DETAIL
-  // ********************************************************************************************
+} 
 
-  // ********************************************************************************************
-  // MAIN
-  // ********************************************************************************************
+void cleanWormTail() {
+  int tailindex;
 
-  enum ResCodes main(void) {
-    int res_code;         // Result code from functions
-    printf("Debbugger starten. \n Bitte Taste drücken.\n");
-    getchar();
+  //Compute tailindex
+  tailindex = (theworm_headindex + 1) % theworm_maxindex;
+  //Check the array of worm elements.
+  //Is the array element at tailindex already in use?
+  //Checking either array theworm_wormpos_y
+  //or theworm_wormpos_x is enough.
 
-
-    // Here we start
-    initializeCursesApplication();  // Init various settings of our application
-    initializeColors();             // Init colors used in the game
-
-    // Maximal LINES and COLS are set by curses for the current window size.
-    // Note: we do not cope with resizing in this simple examples!
-
-    // Check if the window is large enough to display messages in the message area
-    // a has space for at least one line for the worm
-    if ( LINES < MIN_NUMBER_OF_ROWS || COLS < MIN_NUMBER_OF_COLS ) {
-      // Since we not even have the space for displaying messages
-      // we print a conventional error message via printf after
-      // the call of cleanupCursesApp()
-      cleanupCursesApp();
-      printf("Das Fenster ist zu klein: wir brauchen mindestens %dx%d\n",
-          MIN_NUMBER_OF_COLS, MIN_NUMBER_OF_ROWS );
-      res_code = RES_FAILED;
-    } else {
-      res_code = doLevel();
-      cleanupCursesApp();
-    }
-
-    return res_code;
+  if(theworm_wormpos_x[tailindex] != UNUSED_POS_ELEM){
+    //YES: place a SYMBOL_FREE_CELL at the tail's position
+    placeItem(theworm_wormpos_y[tailindex],theworm_wormpos_x[tailindex], SYMBOL_FREE_CELL, COLP_FREE_CELL); 
   }
+}
+// END WORM_DETAIL
+// ********************************************************************************************
+
+// ********************************************************************************************
+// MAIN
+// ********************************************************************************************
+
+enum ResCodes main(void) {
+  enum ResCodes res_code;         // Result code from functions
+  printf("Debbugger starten. \n Bitte Taste drücken.\n");
+  getchar();
+
+
+  // Here we start
+  initializeCursesApplication();  // Init various settings of our application
+  initializeColors();             // Init colors used in the game
+
+  // Maximal LINES and COLS are set by curses for the current window size.
+  // Note: we do not cope with resizing in this simple examples!
+
+  // Check if the window is large enough to display messages in the message area
+  // a has space for at least one line for the worm
+  if ( LINES < MIN_NUMBER_OF_ROWS || COLS < MIN_NUMBER_OF_COLS ) {
+    // Since we not even have the space for displaying messages
+    // we print a conventional error message via printf after
+    // the call of cleanupCursesApp()
+    cleanupCursesApp();
+    printf("Das Fenster ist zu klein: wir brauchen mindestens %dx%d\n",
+        MIN_NUMBER_OF_COLS, MIN_NUMBER_OF_ROWS );
+    res_code = RES_FAILED;
+  } else {
+    //     nodelay(stdscr, FALSE);
+    //  getch();
+    // nodelay(stdscr, TRUE);
+    res_code = doLevel();
+    cleanupCursesApp();
+  }
+
+  return res_code;
+}
