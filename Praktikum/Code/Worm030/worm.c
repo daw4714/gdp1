@@ -16,69 +16,13 @@
 #include <string.h>
 #include <unistd.h>
 
-// ********************************************************************************************
-// Constants, data structures
-// ********************************************************************************************
+#include "prep.h"
+#include "worm.h"
+#include "worm_model.h"
+#include "board_model.h"
 
-
-// Result codes of functions
-
-enum ResCodes {
-  RES_OK,
-  RES_FAILED,
-};
-
-//### Codes for the array of positions ###
-//Unused element in the worm arrays of positions
-#define UNUSED_POS_ELEM -1
-
-
-
-// Dimensions and bounds
-#define NAP_TIME    100   // Time in milliseconds to sleep between updates of display
-#define MIN_NUMBER_OF_ROWS  3   // The guaranteed number of rows available for the board
-#define MIN_NUMBER_OF_COLS 10   // The guaranteed number of columns available for the board
-#define WORM_LENGTH 20   // Maximal length of the worm
-
-// Numbers for color pairs used by curses macro COLOR_PAIR
-//d #define COLP_USER_WORM 1
-enum ColorPairs{
-  COLP_USER_WORM = 1, //d COLP_USER_WORM forced to be 1
-  COLP_FREE_CELL,
-};
-
-// Symbols to display
-#define SYMBOL_FREE_CELL ' '
-#define SYMBOL_WORM_INNER_ELEMENT '0'
-
-// Game state codes
-
-enum GameStates {
-  WORM_GAME_ONGOING,
-  WORM_OUT_OF_BOUNDS, //Left screen
-  WORM_CROSSING,  // Worm head crossed another worm element
-  WORM_GAME_QUIT, // User likes to quit
-};
-
-// Directions for the worm
-enum WormHeading {
-  WORM_UP,
-  WORM_DOWN,
-  WORM_LEFT,
-  WORM_RIGHT,
-};
-
-
-
-// ********************************************************************************************
-// Global variables
-// ********************************************************************************************
-
-// Data defining the worm
-// They will become components of a structure, later
-// Last usable index into the arrays
-// theeorm_wormpos_y and theworm_wormpos_x
 int theworm_maxindex;
+
 //An index into the array for the worm's head position
 //0 <= theworm_headindex <= theworm_maxindex
 int theworm_headindex;
@@ -91,35 +35,20 @@ int theworm_wormpos_x[WORM_LENGTH];
 int theworm_dx;
 int theworm_dy;
 
-enum ColorPairs theworm_wcolor; //d int durch enum ersetzt 
-
-// ********************************************************************************************
-// Forward declarations of functions
-// ********************************************************************************************
-// This avoids problems with the sequence of function declarations inside the code.
-// Note: this kind of problem is solved by header files later on!
+enum ColorPairs theworm_wcolor;
+// Functions concerning the management of the worm data
+extern int initializeWorm(int len_max, int headpos_y, int headpos_x, enum WormHeading dir, enum ColorPairs color);//d
+extern void showWorm();
+extern void cleanWormTail();
+extern void moveWorm(enum GameStates* agame_state);//d
+extern bool isInUseByWorm(int new_headpos_y, int new_headpos_x);
+extern void setWormHeading(enum WormHeading dir);
 
 // Management of the game
 void initializeColors();
 void readUserInput(enum GameStates* agame_state );//d
 enum ResCodes doLevel();
-// Standard curses initialization and cleanup
-void initializeCursesApplication(); 
-void cleanupCursesApp(void);
 
-// Placing and removing items from the game board
-// Check boundaries of game board
-void placeItem(int y, int x, chtype symbol, enum ColorPairs color_pair);
-int getLastRow();
-int getLastCol();
-
-// Functions concerning the management of the worm data
-int initializeWorm(int len_max, int headpos_y, int headpos_x, enum WormHeading dir, enum ColorPairs color);//d
-void showWorm();
-void cleanWormTail();
-void moveWorm(enum GameStates* agame_state);//d
-bool isInUseByWorm(int new_headpos_y, int new_headpos_x);
-void setWormHeading(enum WormHeading dir);
 
 // ********************************************************************************************
 // Functions
@@ -262,7 +191,7 @@ void initializeCursesApplication() {
 }
 
 // Reset display to normale state and terminate curses application
-void cleanupCursesApp(void)
+ void cleanupCursesApp(void)
 {
   standend();   // Turn off all attributes
   refresh();    // Write changes to terminal
@@ -468,7 +397,7 @@ enum ResCodes main(void) {
 
 
   // Here we start
-  initializeCursesApplication();  // Init various settings of our application
+ initializeCursesApplication();  // Init various settings of our application
   initializeColors();             // Init colors used in the game
 
   // Maximal LINES and COLS are set by curses for the current window size.
