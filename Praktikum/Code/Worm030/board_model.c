@@ -12,8 +12,18 @@
 #include "board_model.h"
 
 // The board model
-void placeItem(int y, int x, chtype symbol, enum ColorPairs color_pair);
-int getLastRow();
-int getLastCol();
+void placeItem(int y, int x, chtype symbol, enum ColorPairs color_pair){
+  move(y,x);
+  attron(COLOR_PAIR(color_pair));
+  addch(SYMBOL_WORM_INNER_ELEMENT);
+  attroff(COLOR_PAIR(color_pair));
+}
+//Getters
+int getLastRow(){
+  return LINES-1;}
+
+int getLastCol(){
+  return COLS-1;
+}
 
 
