@@ -31,7 +31,7 @@ void initializeColors() {
   init_pair(COLP_FREE_CELL, COLOR_BLACK,    COLOR_BLACK);
 }
 
-void readUserInput(enum GameStates* agame_state ){ //d enum ersetzt int
+void readUserInput(struct worm* aworm, enum GameStates* agame_state ){ //d enum ersetzt int
   int ch; // For storing the key codes
 
   if ((ch = getch()) > 0) {
@@ -42,16 +42,16 @@ void readUserInput(enum GameStates* agame_state ){ //d enum ersetzt int
         *agame_state = WORM_GAME_QUIT;
         break;
       case KEY_UP :// User wants up
-        setWormHeading(WORM_UP);
+        setWormHeading(aworm, WORM_UP);
         break;
       case KEY_DOWN :// User wants down
-        setWormHeading(WORM_DOWN);
+        setWormHeading(aworm, WORM_DOWN);
         break;
       case KEY_LEFT :// User wants left
-        setWormHeading(WORM_LEFT);
+        setWormHeading(aworm, WORM_LEFT);
         break;
       case KEY_RIGHT :// User wants right
-        setWormHeading(WORM_RIGHT);
+        setWormHeading(aworm, WORM_RIGHT);
         break;
       case 's' : // User wants single step
         nodelay(stdscr, FALSE);   // We simply make getch blocking
@@ -65,27 +65,28 @@ void readUserInput(enum GameStates* agame_state ){ //d enum ersetzt int
 }
 
 enum ResCodes doLevel() {
+  struct worm userworm; // Local variable for storing the user's worm
   enum GameStates game_state; //d The current game_state
   enum ResCodes res_code; //d Result code from function (ersetzt int durch enum)
   int end_level_loop; // Indicates whether we should leave main loop
 
-  int bottomLeft_y, bottomLeft_x;   // Start positions of the worm
+  struct pos bottomLeft;   // Start positions of the worm
 
   // At the beginnung of the level, we still have a chance to win
   game_state = WORM_GAME_ONGOING;
 
   // There is always an initialized user worm.
   // Initialize the userworm with its size, position, heading.
-  bottomLeft_y =  getLastRow();
-  bottomLeft_x =  0;
+  bottomLeft.y =  getLastRow();
+  bottomLeft.x =  0;
 
-  res_code = initializeWorm(WORM_LENGTH,bottomLeft_y, bottomLeft_x , WORM_RIGHT, COLP_USER_WORM);
+  res_code = initializeWorm(&userworm, WORM_LENGTH, bottomLeft, WORM_RIGHT, COLP_USER_WORM);
   if ( res_code != RES_OK) {
     return res_code;
   }
 
   // Show worm at its initial position
-  showWorm();
+  showWorm(&userworm);
 
   // Display all what we have set up until now
   refresh();
@@ -94,7 +95,7 @@ enum ResCodes doLevel() {
   end_level_loop = false; // Flag for controlling the main loop
   while(!end_level_loop) {//d ! anstatt == false
     // Process optional user input
-    readUserInput(&game_state); 
+    readUserInput(&userworm, &game_state); 
     if ( game_state == WORM_GAME_QUIT ) {
       end_level_loop = true;
       continue; // Go to beginning of the loop's block and check loop condition
@@ -102,16 +103,16 @@ enum ResCodes doLevel() {
 
     // Process userworm
     // Clean the tail of the worm
-    cleanWormTail();
+    cleanWormTail(&userworm);
     // Now move the worm for one step
-    moveWorm(&game_state);
+    moveWorm(&userworm, &game_state);
     // Bail out of the loop if something bad happened
     if ( game_state != WORM_GAME_ONGOING ) {
       end_level_loop = true;
       continue; // Go to beginning of the loop's block and check loop condition
     }
     // Show the worm at its new position
-    showWorm();
+    showWorm(&userworm);
     // END process userworm
 
     // Sleep a bit before we show the updated window
