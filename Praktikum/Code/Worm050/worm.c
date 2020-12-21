@@ -20,7 +20,7 @@
 #include "worm.h"
 #include "worm_model.h"
 #include "board_model.h"
-
+#include "messages.h"
 
 
 // Initialize colors of the game
@@ -29,6 +29,8 @@ void initializeColors() {
   start_color();
   init_pair(COLP_USER_WORM, COLOR_GREEN,    COLOR_BLACK);
   init_pair(COLP_FREE_CELL, COLOR_BLACK,    COLOR_BLACK);
+  init_pair(COLP_BARRIER, COLOR_RED,    COLOR_BLACK);
+
 }
 
 void readUserInput(struct worm* aworm, enum GameStates* agame_state ){ //d enum ersetzt int
@@ -84,7 +86,8 @@ enum ResCodes doLevel() {
   if ( res_code != RES_OK) {
     return res_code;
   }
-
+  // Show border line in order to seperate the message area
+  showBorderLine();
   // Show worm at its initial position
   showWorm(&userworm);
 
@@ -114,7 +117,8 @@ enum ResCodes doLevel() {
     // Show the worm at its new position
     showWorm(&userworm);
     // END process userworm
-
+    // Inform user about position and length of userworm in status window
+    showStatus(&userworm);
     // Sleep a bit before we show the updated window
     napms(NAP_TIME);
 
@@ -128,8 +132,24 @@ enum ResCodes doLevel() {
   res_code = RES_OK;
 
   // For some reason we left the control loop of the current level.
-  // However, in this version we do not yet check for the reason.
-  // There is no user feedback at the moment!
+  // Check why according to game_state
+  switch (game_state){
+    case WORM_GAME_QUIT:
+      //User must have type 'q' for quit
+      showDialog("Sie haben die aktuelle Runde abgebrochen!", "Bitte Taste druecken");
+      break;
+    case WORM_OUT_OF_BOUNDS:
+      showDialog("Sie haben das Spiel verloren, " "weil Sie das Spielfeld verlassen haben" , "Bitte Taste druecken");
+      break;
+    case WORM_CROSSING:
+      showDialog("Sie haben das Spiel verloren, " "weil Sie einen Wurm gekreuzt haben", "Bitte Taste druecken");
+      break;
+    default: 
+      showDialog("Interner Fehler!", "Bitte Taste druecken");
+      //Set error result code. This should never happen.
+      res_code = RES_INTERNAL_ERROR;
+  }
+
 
   // Normal exit point
   return res_code;
@@ -156,13 +176,13 @@ enum ResCodes main(void) {
 
   // Check if the window is large enough to display messages in the message area
   // a has space for at least one line for the worm
-  if ( LINES < MIN_NUMBER_OF_ROWS || COLS < MIN_NUMBER_OF_COLS ) {
+  if ( LINES < ROWS_RESERVED +  MIN_NUMBER_OF_ROWS || COLS < MIN_NUMBER_OF_COLS ) {
     // Since we not even have the space for displaying messages
     // we print a conventional error message via printf after
     // the call of cleanupCursesApp()
     cleanupCursesApp();
     printf("Das Fenster ist zu klein: wir brauchen mindestens %dx%d\n",
-        MIN_NUMBER_OF_COLS, MIN_NUMBER_OF_ROWS );
+        MIN_NUMBER_OF_COLS, MIN_NUMBER_OF_ROWS + ROWS_RESERVED );
     res_code = RES_FAILED;
   } else {
     //     nodelay(stdscr, FALSE);

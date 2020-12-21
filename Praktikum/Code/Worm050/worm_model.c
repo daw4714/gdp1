@@ -11,6 +11,13 @@
 #include "board_model.h"
 #include "worm_model.h"
 
+//Getters
+struct pos getWormHeadPos(struct worm* aworm){
+  //Structure are passed by value!
+  // -> we return a copy here
+  return aworm->wormpos[aworm->headindex];
+}
+
 // The worm model
 // Functions concerning the management of the worm data
 enum ResCodes initializeWorm(struct worm* aworm, int len_max,struct pos headpos, enum WormHeading dir, enum ColorPairs color) {//d enum ersetzt int
@@ -30,7 +37,7 @@ enum ResCodes initializeWorm(struct worm* aworm, int len_max,struct pos headpos,
   for(i = 0; i <= aworm->maxindex; i++){
     aworm->wormpos[i].y = UNUSED_POS_ELEM;
     aworm->wormpos[i].x = UNUSED_POS_ELEM;
-    i = i +1;
+//    i = i +1;
   }
   // Initialize position of worms head
   aworm->wormpos[aworm->headindex] = headpos;
@@ -54,34 +61,32 @@ void showWorm(struct worm* aworm) {
       SYMBOL_WORM_INNER_ELEMENT,aworm->wcolor);
 }
 void moveWorm(struct worm* aworm, enum GameStates* agame_state) {//d enum ersetzt int
-  int headpos_y;
-  int headpos_x;
-  
+ struct pos headpos;
 
   //Get the current position of the worm's head element and
   //compute the new head position according to current heading
   //Do not store the new head position in the array of positions, yet.
-  headpos_y = aworm->wormpos[aworm->headindex].y + aworm->dy;
-  headpos_x = aworm->wormpos[aworm->headindex].x + aworm->dx;
+  headpos.y = aworm->wormpos[aworm->headindex].y + aworm->dy;
+  headpos.x = aworm->wormpos[aworm->headindex].x + aworm->dx;
 
 
   // Check if we would hit something (good or bad) or are going to leave
   /// the display if we move the worm's head according to worm's last
   // We are not allowed to leave the display's window.
-  if (headpos_x < 0) {
+  if (headpos.x < 0) {
     *agame_state = WORM_OUT_OF_BOUNDS;
-  } else if (headpos_x > getLastCol() ) {
+  } else if (headpos.x > getLastCol() ) {
     *agame_state = WORM_OUT_OF_BOUNDS;
-  } else if (headpos_y < 0) {
+  } else if (headpos.y < 0) {
     *agame_state = WORM_OUT_OF_BOUNDS;
-  } else if (headpos_y > getLastRow() ) {
+  } else if (headpos.y > getLastRow() ) {
     *agame_state = WORM_OUT_OF_BOUNDS;
   } else {
     // We will stay within bounds.
     // Check if the worm's head will collide with itself at the new position
 
 
-    if(isInUseByWorm(aworm,#########)){
+    if(isInUseByWorm(aworm,headpos)){
       //That's bad: stop game
       *agame_state = WORM_CROSSING;
     }
@@ -96,8 +101,8 @@ void moveWorm(struct worm* aworm, enum GameStates* agame_state) {//d enum ersetz
     aworm->headindex = (aworm->headindex  + 1) % aworm->maxindex;
 
     //Store new coordinates of head element in worm structure
-    aworm->wormpos.x[aworm->headindex] = headpos_x;
-    aworm->wormpos.y[aworm->headindex] = headpos_y;
+    aworm->wormpos[aworm->headindex].x = headpos.x;
+    aworm->wormpos[aworm->headindex].y = headpos.y;
   }
 }
 //A simple collission detection

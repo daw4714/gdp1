@@ -16,6 +16,8 @@
 #include "worm.h"
 #include "board_model.h"
 // A worm structure
+
+
 struct worm
 {
   int maxindex; // Last usable index into the array pointed to by wormpos
@@ -47,7 +49,7 @@ extern void showWorm(struct worm* aworm);
 extern void cleanWormTail(struct worm* aworm);
 extern void moveWorm(struct worm* aworm, enum GameStates* agame_state);//d
 extern bool isInUseByWorm(struct worm* aworm, struct pos new_headpos);
-
+extern struct pos getWormHeadPos(struct worm* aworm);
 // Setters
 extern void setWormHeading(struct worm* aworm, enum WormHeading dir);
 
