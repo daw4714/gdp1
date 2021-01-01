@@ -10,7 +10,7 @@
 #include <curses.h>
 #include "worm.h"
 #include "board_model.h"
-#include "messages.c"
+#include "messages.h"
 
 // The board model
 void placeItem(struct board* aboard,int y, int x, enum BoardCodes board_code, chtype symbol, enum ColorPairs color_pair){
@@ -46,9 +46,9 @@ void decrementNumberOfFoodItems(struct board* aboard){
 enum ResCodes initializeBoard(struct board* aboard){
   // Check dimensions of the board
 if( COLS < MIN_NUMBER_OF_COLS || LINES < MIN_NUMBER_OF_ROWS + ROWS_RESERVED){
-  char buff[100];
-  sprintf(buff, "Das Fenster ist zu klein: wir brauchen %dx%d", MIN_NUMBER_OF_COLS, MIN_NUMBER_OF_ROWS + ROWS_RESERVED);
-  showDialog(buff, "Bitte eine Taste drücken");
+  char buf[100];
+  sprintf(buf, "Das Fenster ist zu klein: wir brauchen %dx%d", MIN_NUMBER_OF_COLS, MIN_NUMBER_OF_ROWS + ROWS_RESERVED);
+showDialog(buf, "Bitte eine Taste drücken");
   return RES_FAILED;
 }
 // Maximal index of a row

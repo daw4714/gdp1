@@ -61,21 +61,23 @@ void showWorm(struct board* aboard,struct worm* aworm) {
   // Due to our encoding we just need to show the head element
   // All ot
   // her elements are already displayed
-  placeItem(aboard,
-      aworm->wormpos[aworm->headindex].y ,
-      aworm->wormpos[aworm->headindex].x, BC_USED_BY_WORM, 
-      SYMBOL_WORM_HEAD_ELEMENT,aworm->wcolor);
 
 int i = aworm->headindex + 1;
   do{
-    
+   if(i == aworm->headindex){
+    placeItem(aboard,
+      aworm->wormpos[aworm->headindex].y ,
+      aworm->wormpos[aworm->headindex].x, BC_USED_BY_WORM,
+      SYMBOL_WORM_HEAD_ELEMENT,aworm->wcolor);
+
+   }  
      placeItem(aboard,
       aworm->wormpos[aworm->headindex].y ,
       aworm->wormpos[aworm->headindex].x, BC_USED_BY_WORM,
       SYMBOL_WORM_INNER_ELEMENT,aworm->wcolor);
 
       i++;
-      if(i>aworm->cur_lastindex-1){
+      if(i>(aworm->cur_lastindex-1)){
         i = aworm->headindex;
          placeItem(aboard,
       aworm->wormpos[aworm->headindex].y ,
@@ -208,7 +210,7 @@ void cleanWormTail(struct board* aboard, struct worm* aworm) {
 
   if(aworm->wormpos[tailindex].x != UNUSED_POS_ELEM){
     //YES: place a SYMBOL_FREE_CELL at the tail's position
-    placeItem(aboard, aworm -> wormpos[tailindex].y, aworm -> wormpos[tailindex].x, BC_FREE_CELL,  SYMBOL_FREE_CELL, COLP_FREE_CELL);
+    placeItem(aboard, aworm->wormpos[tailindex].y, aworm->wormpos[tailindex].x, BC_FREE_CELL,  SYMBOL_FREE_CELL, COLP_FREE_CELL);
   }
 } 
 
