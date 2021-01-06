@@ -39,7 +39,7 @@ struct board
     int last_row; // Last usable row on the board
     int last_col; // Last usable column on the board
 
-    enum BoardCodes cells[MIN_NUMBER_OF_ROWS][MIN_NUMBER_OF_COLS];
+    enum BoardCodes** cells; //Row-Pointer for APA-Structure
     // A 2-dimensional array for storing the contents of the board.
     //
     // Since the worm is not permitted to cross over itsself
@@ -49,6 +49,7 @@ struct board
     int food_items; // Number of food items left in the current level
 };
 
+extern void cleanupBoard(struct board* aboard); //free allocated memory
 extern enum ResCodes initializeBoard(struct board* aboard);
 extern void placeItem(struct board* aboard, int y, int x, enum BoardCodes board_code,
                chtype symbol, enum ColorPairs color_pair);
