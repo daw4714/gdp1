@@ -82,14 +82,14 @@ return RES_FAILED;
 }
 // Allocate memory for 2-dimensional array of cells
 // Alloc array of rows
-aboard->cells = malloc(sizeof(enum BoardCodes*)*ROWS_RESERVED);   // Hier Speicher allozieren
+aboard->cells = malloc(sizeof(enum BoardCodes*) * (LINES - ROWS_RESERVED));   // Hier Speicher allozieren
 if (aboard->cells == NULL) {
 showDialog("Abbruch: Zu wenig Speicher","Bitte eine Taste druecken");
 exit(RES_FAILED); // No memory -> direct exit
 }
-for (y = 0; y < ROWS_RESERVED ; y++) {
+for (y = 0; y < LINES - ROWS_RESERVED ; y++) {
 // Allocate array of columns for each y (Row)
-aboard->cells[y] = malloc(sizeof(enum BoardCodes)*COLS); // Hier Speicher allozieren
+aboard->cells[y] = malloc(sizeof(enum BoardCodes*) * COLS); // Hier Speicher allozieren
 if (aboard->cells[y] == NULL) {
  showDialog("Abbruch: Zu wenig Speicher","Bitte eine Taste druecken");
 exit(RES_FAILED); // No memory -> direct exit
