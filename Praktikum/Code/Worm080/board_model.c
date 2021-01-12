@@ -117,10 +117,6 @@ enum ResCodes initializeLevel(struct board* aboard) {
     addch(SYMBOL_BARRIER);
     attroff(COLOR_PAIR(COLP_BARRIER));
   }
-  // Line at the rightmost colum of board
-  for(y=0; y <= aboard->last_row; y++){
-    placeItem(aboard, y, aboard->last_col, BC_BARRIER, SYMBOL_BARRIER, COLP_BARRIER);
-  }
   // Barriers
   x = (aboard->last_col) / 3 - 2;
   for(y=3; y < 13; y++){
@@ -151,7 +147,13 @@ enum ResCodes initializeLevel(struct board* aboard) {
 
 
 
+void cleanupBoard(struct board* aboard){
+for(int row = 0; row < LINES - ROWS_RESERVED; row++){
+free(aboard->cells[row]);
+} // !!! wichtig: Auch alle Spalten befreien sonst wird der Zugang dazu getrennt und lässt eine Speicherfreigabe zu einem späteren Zeitpunkt nicht mehr zu !!!
+free(aboard->cells);
 
+}
 
 
 

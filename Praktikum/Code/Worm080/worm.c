@@ -194,7 +194,9 @@ enum ResCodes doLevel() {
         showDialog("Interner Fehler!", "Bitte Taste drücken");
         res_code = RES_INTERNAL_ERROR;
     }
+    cleanupBoard(&theboard); //Freigabe des allozierten Speichers
     // Normal exit point
+
     return res_code;
 }
 
